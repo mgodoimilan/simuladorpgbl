@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador PGBL – Economia no IR</title>
+  <meta name="description" content="Calcule quanto você pode economizar no Imposto de Renda ao investir em PGBL (dedutível até 12% da renda bruta anual, modelo completo)." />
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#161922; --muted:#9aa4b2; --text:#e8ecf1; --accent:#4f8cff; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; --ring:rgba(79,140,255,.35);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0e1116,#0b0d12);color:var(--text);font:500 16px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+    .container{max-width:980px;margin:0 auto;padding:32px 20px 56px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:42px;height:42px;border-radius:12px;background:radial-gradient(circle at 30% 20%, #6aa6ff 0%, #4f8cff 40%, #2a5fd9 100%);box-shadow:0 6px 24px rgba(79,140,255,.35)}
+    h1{font-size:clamp(22px,2.8vw,32px);margin:0}
+    .sub{color:var(--muted);font-weight:500}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05)}
+    .grid{display:grid;gap:16px}
+    .grid.cols{grid-template-columns:repeat(12,minmax(0,1fr))}
+    .panel{padding:18px}
+
+    .field{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    label{font-weight:600}
+    .hint{color:var(--muted);font-size:13px}
+    input[type="text"]{width:100%;padding:14px 14px;border-radius:12px;background:#0b0e14;border:1px solid rgba(255,255,255,.1);color:var(--text);font:600 16px/1 Inter;transition:.2s}
+    input[type="text"]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 6px var(--ring)}
+
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,#3e7bf8,#3469d9);color:white;font-weight:700;text-decoration:none;cursor:pointer}
+    .btn:active{transform:translateY(1px)}
+
+    .results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .kpi{padding:16px;border-radius:14px;background:#0b0e14;border:1px solid rgba(255,255,255,.08)}
+    .kpi h3{margin:0 0 6px;font-size:14px;color:var(--muted);font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+    .kpi .val{font-size:clamp(20px,3.5vw,28px);font-weight:800}
+    .kpi small{display:block;color:var(--muted)}
+
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#bef7d0;font-weight:700;font-size:13px}
+    .pill.warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:#ffe5b3}
+    .pill.danger{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35);color:#ffd0d0}
+
+    .note{color:var(--muted);font-size:13px}
+    .muted-box{padding:12px;border-radius:12px;background:#0b0e14;border:1px dashed rgba(255,255,255,.12);color:var(--muted)}
+
+    footer{margin-top:32px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;color:var(--muted)}
+    .links{display:flex;gap:10px;flex-wrap:wrap}
+
+    @media (max-width:840px){
+      .results{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Simulador PGBL</h1>
+          <div class="sub">Descubra sua economia potencial de IR ao investir em PGBL (dedutível até 12% da renda bruta anual).</div>
+        </div>
+      </div>
+      <a id="shareBtn" class="btn" href="#" aria-label="Compartilhar resultados">Compartilhar</a>
+    </header>
+
+    <section class="card panel" aria-labelledby="form-caption">
+      <h2 id="form-caption" style="margin-top:0">Preencha seus dados</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="renda">Renda bruta anual (R$)</label>
+          <input id="renda" type="text" inputmode="numeric" placeholder="ex.: 120.000" />
+          <div class="hint">Use apenas números. Consideramos a <strong>tabela anual do IRPF (exercício 2026 / ano-calendário 2025)</strong>.</div>
+        </div>
+        <div class="field">
+          <label for="aporte">Aporte anual em PGBL (R$)</label>
+          <input id="aporte" type="text" inputmode="numeric" placeholder="ex.: 12.000" />
+          <div class="hint">Lembrando: o limite dedutível do PGBL é <strong>12% da renda bruta anual</strong>. Se você informar acima disso, vamos limitar automaticamente no cálculo.</div>
+        </div>
+        <div>
+          <button id="calc" class="btn">Calcular</button>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top:16px" class="card panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <h2 style="margin:0">Resultados</h2>
+        <span id="statusPill" class="pill" hidden>Pronto</span>
+      </div>
+      <div class="results" style="margin-top:12px">
+        <div class="kpi">
+          <h3>Imposto sem PGBL</h3>
+          <div id="irSem" class="val">R$ 0,00</div>
+          <small id="aliqSem">Alíquota efetiva: 0,00%</small>
+        </div>
+        <div class="kpi">
+          <h3>Imposto com PGBL</h3>
+          <div id="irCom" class="val">R$ 0,00</div>
+          <small id="aliqCom">Alíquota efetiva: 0,00%</small>
+        </div>
+        <div class="kpi">
+          <h3>Economia / Restituição</h3>
+          <div id="economia" class="val">R$ 0,00</div>
+          <small id="obsLimite">Aporte considerado: R$ 0,00</small>
+        </div>
+      </div>
+
+      <div id="limiteMsg" class="muted-box" style="margin-top:12px" hidden>
+        <strong>Atenção:</strong> O valor de aporte informado ultrapassa 12% da renda. Para fins de dedução, consideramos <span id="limiteConsiderado">R$ 0,00</span>.
+      </div>
+    </section>
+
+    <section style="margin-top:16px" class="card panel">
+      <h3 style="margin-top:0">Hipóteses e observações</h3>
+      <ul style="margin:0 0 10px 18px;line-height:1.6">
+        <li>Simulação <strong>educativa</strong> com base na <em>tabela progressiva anual</em> do IRPF para o exercício 2026 (ano-calendário 2025).</li>
+        <li>Considera apenas: renda bruta anual informada e dedução por PGBL (limitada a 12%). <strong>Não</strong> inclui outras deduções (dependentes, saúde, educação, pensão etc.).</li>
+        <li>Para usufruir do benefício do PGBL é necessário <strong>declarar no modelo completo</strong> e contribuir à previdência oficial.</li>
+        <li>A tributação do resgate/benefício do PGBL segue o regime escolhido (progressivo/definitivo ou regressivo) e <strong>não</strong> é tratada neste simulador.</li>
+      </ul>
+      <div class="note">Dica: utilize este resultado como ponto de partida para um planejamento personalizado.</div>
+    </section>
+
+    <footer>
+      <div>© <span id="year"></span> Simulador PGBL • Feito com 💙 para planejamento financeiro consciente</div>
+      <div class="links">
+        <a href="https://www.gov.br/receitafederal/pt-br/assuntos/meu-imposto-de-renda/tabelas/2025" target="_blank" rel="noopener" class="sub">Tabela IRPF 2025</a>
+        <a href="#" id="copyLink" class="sub">Copiar link desta página</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const fmt = (v)=> v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const pct = (v)=> (v*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+
+    // Tabela progressiva ANUAL – Exercício 2026 (ano-calendário 2025) – Receita Federal (set/2025)
+    // Faixas com {lim, aliq, ded} onde o imposto é aliq*base - ded quando base > limAnterior
+    const TABELA_ANUAL_2025 = [
+      {lim: 28467.20, aliq: 0.00, ded: 0.00},
+      {lim: 33919.80, aliq: 0.075, ded: 2135.04},
+      {lim: 45012.60, aliq: 0.15, ded: 4679.03},
+      {lim: 55976.16, aliq: 0.225, ded: 8054.97},
+      {lim: Infinity, aliq: 0.275, ded: 10853.78},
+    ];
+
+    function calcularIR(base){
+      if (base <= 0 || !isFinite(base)) return 0;
+      // Encontra a faixa correspondente
+      for (let i=0;i<TABELA_ANUAL_2025.length;i++){
+        const faixa = TABELA_ANUAL_2025[i];
+        if (base <= faixa.lim){
+          const imposto = Math.max(0, base * faixa.aliq - faixa.ded);
+          return imposto;
+        }
+      }
+      return 0;
+    }
+
+    function parseBR(str){
+      const s = (str||'').toString().replace(/[^\d,.-]/g,'').replace('.', '').replace(',', '.');
+      const val = parseFloat(s);
+      return isNaN(val) ? 0 : val;
+    }
+
+    const rendaEl = document.getElementById('renda');
+    const aporteEl = document.getElementById('aporte');
+    const btn = document.getElementById('calc');
+
+    const irSemEl = document.getElementById('irSem');
+    const irComEl = document.getElementById('irCom');
+    const ecoEl = document.getElementById('economia');
+    const aliqSemEl = document.getElementById('aliqSem');
+    const aliqComEl = document.getElementById('aliqCom');
+    const limiteMsg = document.getElementById('limiteMsg');
+    const limiteConsiderado = document.getElementById('limiteConsiderado');
+    const obsLimite = document.getElementById('obsLimite');
+    const statusPill = document.getElementById('statusPill');
+
+    function formatOnBlur(el){
+      const v = parseBR(el.value);
+      el.value = v ? v.toLocaleString('pt-BR',{maximumFractionDigits:2}) : '';
+    }
+    rendaEl.addEventListener('blur',()=>formatOnBlur(rendaEl));
+    aporteEl.addEventListener('blur',()=>formatOnBlur(aporteEl));
+
+    function simular(){
+      const renda = parseBR(rendaEl.value);
+      const aporteInformado = parseBR(aporteEl.value);
+      if (!renda || renda < 0){
+        status('Informe uma renda anual válida.', 'warn');
+        return;
+      }
+      const limite = renda * 0.12;
+      const aporteConsideradoVal = Math.max(0, Math.min(aporteInformado, limite));
+
+      limiteMsg.hidden = !(aporteInformado > limite);
+      if (!limiteMsg.hidden){
+        limiteConsiderado.textContent = fmt(aporteConsideradoVal);
+      }
+
+      const baseSem = renda;
+      const baseCom = Math.max(0, renda - aporteConsideradoVal);
+
+      const irSem = calcularIR(baseSem);
+      const irCom = calcularIR(baseCom);
+      const economia = Math.max(0, irSem - irCom);
+
+      irSemEl.textContent = fmt(irSem);
+      irComEl.textContent = fmt(irCom);
+      ecoEl.textContent = fmt(economia);
+      obsLimite.textContent = `Aporte considerado: ${fmt(aporteConsideradoVal)}`;
+
+      const aliqSem = renda ? irSem / renda : 0;
+      const aliqCom = renda ? irCom / renda : 0;
+      aliqSemEl.textContent = `Alíquota efetiva: ${pct(aliqSem)}`;
+      aliqComEl.textContent = `Alíquota efetiva: ${pct(aliqCom)}`;
+
+      status(economia > 0 ? 'Economia encontrada' : 'Sem economia nesta faixa', economia>0?'ok': 'danger');
+    }
+
+    function status(text, type){
+      statusPill.textContent = text;
+      statusPill.hidden = false;
+      statusPill.className = 'pill' + (type==='warn'?' warn': type==='danger'?' danger':'' );
+    }
+
+    btn.addEventListener('click', simular);
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter') simular(); });
+
+    // Compartilhar
+    const year = document.getElementById('year');
+    year.textContent = new Date().getFullYear();
+
+    const shareBtn = document.getElementById('shareBtn');
+    shareBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const renda = parseBR(rendaEl.value);
+      const aporte = parseBR(aporteEl.value);
+      const irSem = irSemEl.textContent;
+      const irCom = irComEl.textContent;
+      const econ = ecoEl.textContent;
+      const msg = `Simulei meu IR com PGBL:\nRenda anual: ${renda.toLocaleString('pt-BR')}\nAporte PGBL: ${aporte.toLocaleString('pt-BR')}\nIR sem PGBL: ${irSem}\nIR com PGBL: ${irCom}\nEconomia: ${econ}`;
+      const url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(msg);
+      window.open(url, '_blank');
+    });
+
+    document.getElementById('copyLink').addEventListener('click', (e)=>{
+      e.preventDefault();
+      navigator.clipboard.writeText(location.href).then(()=>{
+        status('Link copiado!', 'ok');
+      }).catch(()=>{
+        status('Não foi possível copiar o link', 'warn');
+      });
+    });
+  </script>
+</body>
+</html>
